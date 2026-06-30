@@ -442,7 +442,7 @@ Founder & CEO – CodeMyFYP
 * Website: https://codemyfyp.com
 * GitHub: https://github.com/karthikrshet
 * LinkedIn: https://linkedin.com/in/karthikrshet
-* Portfolio: https://karthik-rajesh-shet.vercel.app/ 
+* Portfolio: https://karthik-rajesh-shet.vercel.app/
 
 ---
 
@@ -458,8 +458,8 @@ If you find CareerByte AI useful:
 
 💡 Contribute new features
 ji
----
 
+---
 
 ### Transforming Job Search with AI 🚀
 
