@@ -1,5 +1,11 @@
 # 🚀 CareerByte AI
 
+### Your Personal AI Career Copilot
+
+Built and maintained by **Karthik Rajesh Shet**
+
+AI-powered platform for job discovery, ATS optimization, resume tailoring, application tracking, interview preparation, and career growth.
+
 <div align="center">
 
 ### AI-Powered Career Copilot for Job Discovery, ATS Optimization, Resume Tailoring, Application Tracking & Interview Preparation
