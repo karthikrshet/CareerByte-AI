@@ -420,7 +420,7 @@ Please report security issues responsibly.
 
 For security concerns:
 
-[contact@careerbyte.ai](mailto:contact@careerbyte.ai)
+[contact@careerbyte.ai](mailto:karthik@codemyfyp.com)
 
 ---
 
