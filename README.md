@@ -4,7 +4,6 @@
 
 Built and maintained by **Karthik Rajesh Shet**
 
-AI-powered platform for job discovery, ATS optimization, resume tailoring, application tracking, interview preparation, and career growth.
 
 <div align="center">
 
