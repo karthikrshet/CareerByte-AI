@@ -458,8 +458,9 @@ If you find CareerByte AI useful:
 
 💡 Contribute new features
 
+jai shree ram
+
 ---
-hi  br0
 
 
 ### Transforming Job Search with AI 🚀
