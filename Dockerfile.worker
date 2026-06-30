@@ -1,0 +1,22 @@
+FROM node:20-alpine AS base
+RUN apk add --no-cache libc6-compat openssl
+WORKDIR /app
+
+FROM base AS deps
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma/
+RUN npm ci
+
+FROM base AS worker
+ENV NODE_ENV=production
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json ./
+COPY prisma ./prisma/
+COPY workers ./workers
+COPY lib ./lib
+COPY config ./config
+COPY types ./types
+COPY tsconfig.json ./
+RUN npx prisma generate
+
+CMD ["npx", "tsx", "workers/job-ingestion.ts"]

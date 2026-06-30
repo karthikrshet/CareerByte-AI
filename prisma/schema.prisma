@@ -1,0 +1,355 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+// ---------------------------------------------------------------------------
+// NextAuth models (required by @auth/prisma-adapter)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  settings UserSettings?
+  resumes  Resume[]
+  applications JobApplication[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Application models — Phase 1
+// ---------------------------------------------------------------------------
+
+model UserSettings {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  theme              Theme    @default(SYSTEM)
+  emailNotifications Boolean  @default(true)
+  jobAlerts          Boolean  @default(true)
+  weeklyDigest       Boolean  @default(false)
+  timezone           String   @default("UTC")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+// ---------------------------------------------------------------------------
+// Resume Intelligence — Phase 2
+// ---------------------------------------------------------------------------
+
+enum ResumeFileType {
+  PDF
+  DOCX
+}
+
+enum ResumeStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum SkillCategory {
+  TECHNICAL
+  SOFT
+  TOOL
+  LANGUAGE
+  CERTIFICATION
+  OTHER
+}
+
+model Resume {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions ResumeVersion[]
+
+  @@index([userId])
+  @@map("resumes")
+}
+
+model ResumeVersion {
+  id            String         @id @default(cuid())
+  resumeId      String
+  versionNumber Int
+  fileName      String
+  fileType      ResumeFileType
+  fileSize      Int
+  storagePath   String
+  rawText       String?        @db.Text
+  parsedData    Json?
+  status        ResumeStatus   @default(PENDING)
+  errorMessage  String?
+  createdAt     DateTime       @default(now())
+
+  resume Resume        @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  skills ResumeSkill[]
+  atsScore AtsScore?
+
+  @@unique([resumeId, versionNumber])
+  @@index([resumeId])
+  @@map("resume_versions")
+}
+
+model ResumeSkill {
+  id          String        @id @default(cuid())
+  versionId   String
+  name        String
+  category    SkillCategory @default(TECHNICAL)
+  confidence  Float
+  occurrences Int           @default(1)
+
+  version ResumeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([versionId])
+  @@map("resume_skills")
+}
+
+model AtsScore {
+  id              String @id @default(cuid())
+  versionId       String @unique
+  overallScore    Int
+  formattingScore Int
+  keywordScore    Int
+  structureScore  Int
+  lengthScore     Int
+  feedback        Json
+
+  version ResumeVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@map("ats_scores")
+}
+
+// ---------------------------------------------------------------------------
+// Job Discovery Engine — Phase 3
+// ---------------------------------------------------------------------------
+
+enum JobSource {
+  REMOTEOK
+  GREENHOUSE
+  LEVER
+  ASHBY
+  WE_WORK_REMOTELY
+  HIMALAYAS
+  JOBICY
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  FREELANCE
+  TEMPORARY
+  UNKNOWN
+}
+
+enum RemotePolicy {
+  REMOTE
+  HYBRID
+  ONSITE
+  UNKNOWN
+}
+
+enum ApplicationStatus {
+  SAVED
+  APPLIED
+  SCREENING
+  INTERVIEWING
+  OFFERED
+  REJECTED
+  WITHDRAWN
+}
+
+enum IngestionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  website     String?
+  logoUrl     String?
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  jobs JobPosting[]
+
+  @@index([name])
+  @@map("companies")
+}
+
+model JobPosting {
+  id              String         @id @default(cuid())
+  companyId       String
+  title           String
+  slug            String
+  description     String         @db.Text
+  descriptionHtml String?        @db.Text
+  applyUrl        String
+  location        String?
+  remotePolicy    RemotePolicy   @default(UNKNOWN)
+  employmentType  EmploymentType @default(UNKNOWN)
+  salaryMin       Int?
+  salaryMax       Int?
+  salaryCurrency  String?        @default("USD")
+  salaryPeriod    String?
+  salaryRaw       String?
+  fingerprint     String         @unique
+  isActive        Boolean        @default(true)
+  postedAt        DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  company      Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sources      JobSourceRecord[]
+  skills       JobSkill[]
+  applications JobApplication[]
+
+  @@index([companyId])
+  @@index([isActive, postedAt])
+  @@index([title])
+  @@map("job_postings")
+}
+
+model JobSourceRecord {
+  id         String    @id @default(cuid())
+  jobId      String
+  source     JobSource
+  externalId String
+  sourceUrl  String?
+  rawPayload Json?
+  ingestedAt DateTime  @default(now())
+
+  job JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([source, externalId])
+  @@index([jobId])
+  @@map("job_source_records")
+}
+
+model JobSkill {
+  id         String        @id @default(cuid())
+  jobId      String
+  name       String
+  category   SkillCategory @default(TECHNICAL)
+  confidence Float
+
+  job JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, name])
+  @@index([jobId])
+  @@map("job_skills")
+}
+
+model JobApplication {
+  id        String            @id @default(cuid())
+  userId    String
+  jobId     String
+  status    ApplicationStatus @default(SAVED)
+  notes     String?           @db.Text
+  appliedAt DateTime?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId, status])
+  @@map("job_applications")
+}
+
+model IngestionRun {
+  id           String          @id @default(cuid())
+  source       JobSource?
+  status       IngestionStatus @default(PENDING)
+  startedAt    DateTime        @default(now())
+  completedAt  DateTime?
+  jobsFetched  Int             @default(0)
+  jobsCreated  Int             @default(0)
+  jobsUpdated  Int             @default(0)
+  jobsSkipped  Int             @default(0)
+  errorMessage String?         @db.Text
+
+  @@index([source, startedAt])
+  @@map("ingestion_runs")
+}

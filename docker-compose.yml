@@ -1,0 +1,65 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: jobpilot-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: jobpilot
+      POSTGRES_PASSWORD: jobpilot
+      POSTGRES_DB: jobpilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobpilot -d jobpilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jobpilot-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://jobpilot:jobpilot@db:5432/jobpilot?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:-change-me-in-production-use-openssl-rand}
+      AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      CRON_SECRET: ${CRON_SECRET:-change-me-in-production}
+    volumes:
+      - resume_uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: jobpilot-worker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://jobpilot:jobpilot@db:5432/jobpilot?schema=public
+      JOB_INGESTION_CRON: ${JOB_INGESTION_CRON:-0 */6 * * *}
+      JOB_SOURCE_REMOTEOK_ENABLED: ${JOB_SOURCE_REMOTEOK_ENABLED:-true}
+      JOB_SOURCE_HIMALAYAS_ENABLED: ${JOB_SOURCE_HIMALAYAS_ENABLED:-true}
+      JOB_SOURCE_JOBICY_ENABLED: ${JOB_SOURCE_JOBICY_ENABLED:-true}
+      JOB_SOURCE_WWR_ENABLED: ${JOB_SOURCE_WWR_ENABLED:-true}
+      JOB_SOURCE_GREENHOUSE_ENABLED: ${JOB_SOURCE_GREENHOUSE_ENABLED:-true}
+      JOB_SOURCE_LEVER_ENABLED: ${JOB_SOURCE_LEVER_ENABLED:-true}
+      JOB_SOURCE_ASHBY_ENABLED: ${JOB_SOURCE_ASHBY_ENABLED:-true}
+      JOB_SOURCE_GREENHOUSE_BOARDS: ${JOB_SOURCE_GREENHOUSE_BOARDS:-stripe,figma}
+      JOB_SOURCE_LEVER_COMPANIES: ${JOB_SOURCE_LEVER_COMPANIES:-}
+      JOB_SOURCE_ASHBY_BOARDS: ${JOB_SOURCE_ASHBY_BOARDS:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  resume_uploads:
