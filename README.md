@@ -1,8 +1,6 @@
-# 🚀 CareerByte AI
+# 🚀 CareerByte AI ### Your Personal AI Career Copilot
 
-### Your Personal AI Career Copilot
-
-Built and maintained by **Karthik Rajesh Shet**
+#Built and maintained by **Karthik Rajesh Shet**
 
 
 <div align="center">
